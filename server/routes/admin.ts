@@ -41,17 +41,25 @@ const requireAdmin = async (req: any, res: any, next: any) => {
 // تسجيل دخول المدير
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     const admin = await db.query.adminUsers.findFirst({
       where: and(
-        eq(schema.adminUsers.email, email),
+        eq(schema.adminUsers.username, username),
         eq(schema.adminUsers.userType, "admin")
       )
     });
 
-    if (!admin || admin.password !== password) {
-      return res.status(401).json({ error: "بيانات دخول خاطئة" });
+    if (!admin) {
+      return res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+    }
+
+    // التحقق من كلمة المرور باستخدام bcrypt
+    const bcrypt = await import('bcrypt');
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
     }
 
     if (!admin.isActive) {
@@ -75,6 +83,7 @@ router.post("/login", async (req, res) => {
       admin: {
         id: admin.id,
         name: admin.name,
+        username: admin.username,
         email: admin.email,
         userType: admin.userType
       }

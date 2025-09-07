@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const endpoint = userType === 'admin' ? '/api/admin/login' : '/api/driver/login';
       const body = userType === 'admin' 
-        ? { email: identifier, password }
+        ? { username: identifier, password }
         : { phone: identifier, password };
 
       const response = await fetch(endpoint, {
@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userData = {
           id: data[userType].id,
           name: data[userType].name,
-          email: data[userType].email,
+          email: data[userType].email || data[userType].username,
           phone: data[userType].phone,
           userType: userType,
           token: data.token
@@ -97,7 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('auth_user', JSON.stringify({
           id: userData.id,
           name: userData.name,
-          email: userData.email,
+          email: userData.email || userData.username,
           phone: userData.phone,
           userType: userData.userType
         }));

@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { dbStorage } from './db';
+import { dbStorage } from './db.js';
 
 // تعريف الأنواع المطلوبة
 interface InsertAdminSession {
@@ -11,11 +11,13 @@ interface InsertAdminSession {
 }
 
 interface InsertAdminUser {
+  username?: string;
   name: string;
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
   userType: string;
-  isActive?: boolean; // إضافة حقل اختياري إذا كان مطلوباً
+  isActive?: boolean;
 }
 
 export class AuthService {
@@ -27,14 +29,14 @@ export class AuthService {
     return bcrypt.compare(password, hashedPassword);
   }
   
-  async loginAdmin(email: string, password: string): Promise<{ success: boolean; token?: string; userType?: string; message?: string }> {
+  async loginAdmin(username: string, password: string): Promise<{ success: boolean; token?: string; userType?: string; admin?: any; message?: string }> {
     try {
-      const admin = await dbStorage.getAdminByEmail(email);
-      if (!admin) return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' };
+      const admin = await dbStorage.getAdminByUsername(username);
+      if (!admin) return { success: false, message: 'اسم المستخدم أو كلمة المرور غير صحيحة' };
       if (!admin.isActive) return { success: false, message: 'الحساب غير مفعل' };
       
       const isPasswordValid = await this.verifyPassword(password, admin.password);
-      if (!isPasswordValid) return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' };
+      if (!isPasswordValid) return { success: false, message: 'اسم المستخدم أو كلمة المرور غير صحيحة' };
       
       const token = randomUUID();
       const expiresAt = new Date();
@@ -48,9 +50,58 @@ export class AuthService {
       };
       
       await dbStorage.createAdminSession(sessionData);
-      return { success: true, token, userType: admin.userType };
+      return { 
+        success: true, 
+        token, 
+        userType: admin.userType,
+        admin: {
+          id: admin.id,
+          name: admin.name,
+          username: admin.username,
+          email: admin.email,
+          userType: admin.userType
+        }
+      };
     } catch (error) {
       console.error('خطأ في تسجيل الدخول:', error);
+      return { success: false, message: 'حدث خطأ في الخادم' };
+    }
+  }
+
+  async loginDriver(phone: string, password: string): Promise<{ success: boolean; token?: string; userType?: string; driver?: any; message?: string }> {
+    try {
+      const driver = await dbStorage.getDriverByPhone(phone);
+      if (!driver) return { success: false, message: 'رقم الهاتف أو كلمة المرور غير صحيحة' };
+      if (!driver.isActive) return { success: false, message: 'الحساب غير مفعل' };
+      
+      const isPasswordValid = await this.verifyPassword(password, driver.password);
+      if (!isPasswordValid) return { success: false, message: 'رقم الهاتف أو كلمة المرور غير صحيحة' };
+      
+      const token = randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+      
+      const sessionData: InsertAdminSession = {
+        adminId: driver.id,
+        token,
+        userType: driver.userType,
+        expiresAt
+      };
+      
+      await dbStorage.createAdminSession(sessionData);
+      return { 
+        success: true, 
+        token, 
+        userType: driver.userType,
+        driver: {
+          id: driver.id,
+          name: driver.name,
+          phone: driver.phone,
+          userType: driver.userType
+        }
+      };
+    } catch (error) {
+      console.error('خطأ في تسجيل دخول السائق:', error);
       return { success: false, message: 'حدث خطأ في الخادم' };
     }
   }
@@ -83,17 +134,18 @@ export class AuthService {
   
   async createDefaultAdmin(): Promise<void> {
     try {
-      const existingAdmin = await dbStorage.getAdminByEmail('admin@alsarie-one.com');
+      const existingAdmin = await dbStorage.getAdminByUsername('neondb_owner');
       if (!existingAdmin) {
-        const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123456';
+        const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || '777146387';
         const hashedPassword = await this.hashPassword(adminPassword);
         
         const defaultAdmin: InsertAdminUser = {
+          username: 'neondb_owner',
           name: 'مدير النظام',
-          email: 'admin@alsarie-one.com',
+          email: 'aymenpro124@gmail.com',
           password: hashedPassword,
           userType: 'admin',
-          isActive: true // تأكد من تفعيل الحساب
+          isActive: true
         };
         
         await dbStorage.createAdminUser(defaultAdmin);

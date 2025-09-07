@@ -57,15 +57,7 @@ export default function HomePage() {
   });
 
   const { data: restaurants } = useQuery<Restaurant[]>({
-    queryKey: ['/api/restaurants', { categoryId: selectedCategory, search: searchQuery }],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (selectedCategory !== 'all') params.append('categoryId', selectedCategory);
-      if (searchQuery) params.append('search', searchQuery);
-      
-      const response = await fetch(`/api/restaurants?${params}`);
-      return response.json();
-    },
+    queryKey: ['/api/restaurants'],
   });
 
   const { data: specialOffers } = useQuery<SpecialOffer[]>({

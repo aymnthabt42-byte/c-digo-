@@ -1,0 +1,40 @@
+{
+  "name": "alsarie-one-delivery-app",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "build": "npm run client:build && npm run server:build",
+    "start": "npm run server:start",
+    "server:dev": "tsx watch server/index.ts",
+    "server:build": "tsc -p server/tsconfig.json",
+    "server:start": "node dist/server/index.js",
+    "client:dev": "cd client && npm run dev",
+    "client:build": "cd client && npm run build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx migrations/scripts/migrate.js",
+    "db:setup": "tsx migrations/scripts/setup-database.js",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "bcrypt": "^5.1.1",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.30.0",
+    "drizzle-zod": "^0.5.1",
+    "express": "^4.19.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.2",
+    "vite": "^5.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.30",
+    "drizzle-kit": "^0.20.0"
+  }
+}

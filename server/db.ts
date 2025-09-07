@@ -18,6 +18,12 @@ export const db = drizzle(sql, { schema });
 // فئة إدارة قاعدة البيانات
 export class DatabaseStorage {
   // Admin Users
+  async getAdminByUsername(username: string) {
+    return await db.query.adminUsers.findFirst({
+      where: eq(schema.adminUsers.username, username)
+    });
+  }
+
   async getAdminByEmail(email: string) {
     return await db.query.adminUsers.findFirst({
       where: eq(schema.adminUsers.email, email)
@@ -313,12 +319,13 @@ export async function initializeDatabase() {
     
     // إنشاء مدير النظام الافتراضي
     const existingAdmin = await db.query.adminUsers.findFirst({
-      where: eq(schema.adminUsers.email, "aymenpro124@gmail.com")
+      where: eq(schema.adminUsers.username, "neondb_owner")
     });
 
     if (!existingAdmin) {
       const hashedPassword = await bcrypt.hash("777146387", 10);
       await db.insert(schema.adminUsers).values({
+        username: "neondb_owner",
         email: "aymenpro124@gmail.com",
         password: hashedPassword,
         name: "مدير النظام",

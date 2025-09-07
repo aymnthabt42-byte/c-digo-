@@ -12,7 +12,7 @@ export default function AdminLoginPage() {
   const [, setLocation] = useLocation();
   const { login, user, isLoading } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -31,14 +31,14 @@ export default function AdminLoginPage() {
     setError('');
     setIsSubmitting(true);
 
-    if (!formData.email.trim() || !formData.password.trim()) {
-      setError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+    if (!formData.username.trim() || !formData.password.trim()) {
+      setError('يرجى إدخال اسم المستخدم وكلمة المرور');
       setIsSubmitting(false);
       return;
     }
 
     try {
-      const result = await login(formData.email, formData.password, 'admin');
+      const result = await login(formData.username, formData.password, 'admin');
       
       if (result.success) {
         setLocation('/admin');
@@ -103,18 +103,18 @@ export default function AdminLoginPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700 font-medium">
-                  البريد الإلكتروني
+                <Label htmlFor="username" className="text-gray-700 font-medium">
+                  اسم المستخدم
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                  <Shield className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
+                    id="username"
+                    name="username"
+                    type="text"
+                    value={formData.username}
                     onChange={handleInputChange}
-                    placeholder="admin@example.com"
+                    placeholder="neondb_owner"
                     className="pr-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     required
                     disabled={isSubmitting}
@@ -170,7 +170,7 @@ export default function AdminLoginPage() {
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800 font-medium mb-2">بيانات تجريبية:</p>
               <div className="text-xs text-blue-700 space-y-1">
-                <p>البريد الإلكتروني: aymenpro124@gmail.com</p>
+                <p>اسم المستخدم: neondb_owner</p>
                 <p>كلمة المرور: 777146387</p>
               </div>
             </div>

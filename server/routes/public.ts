@@ -209,19 +209,13 @@ router.get("/orders/:id/track", async (req, res) => {
 });
 
 // جلب إعدادات النظام العامة
-router.get("/settings", async (req, res) => {
+router.get("/ui-settings", async (req, res) => {
   try {
     const settings = await db.query.systemSettings.findMany({
       where: eq(schema.systemSettings.isPublic, true)
     });
     
-    // تحويل الإعدادات إلى كائن
-    const settingsObject = settings.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as any);
-    
-    res.json(settingsObject);
+    res.json(settings);
   } catch (error) {
     console.error("خطأ في جلب الإعدادات:", error);
     res.status(500).json({ error: "خطأ في الخادم" });

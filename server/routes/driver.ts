@@ -50,8 +50,16 @@ router.post("/login", async (req, res) => {
       )
     });
 
-    if (!driver || driver.password !== password) {
-      return res.status(401).json({ error: "بيانات دخول خاطئة" });
+    if (!driver) {
+      return res.status(401).json({ error: "رقم الهاتف أو كلمة المرور غير صحيحة" });
+    }
+
+    // التحقق من كلمة المرور باستخدام bcrypt
+    const bcrypt = await import('bcrypt');
+    const isPasswordValid = await bcrypt.compare(password, driver.password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "رقم الهاتف أو كلمة المرور غير صحيحة" });
     }
 
     if (!driver.isActive) {

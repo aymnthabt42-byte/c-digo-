@@ -5,6 +5,7 @@ import { z } from "zod";
 // جدول المديرين والسائقين
 export const adminUsers = pgTable("admin_users", {
   id: uuid("id").primaryKey().defaultRandom(),
+  username: text("username").unique(), // تغيير من email إلى username
   email: text("email").unique(),
   phone: text("phone").unique(),
   password: text("password").notNull(),

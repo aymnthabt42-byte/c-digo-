@@ -17,11 +17,13 @@ export async function apiRequest(
   data?: any,
   token?: string
 ) {
+  const authToken = token || localStorage.getItem('auth_token');
+  
   const config: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(authToken && { Authorization: `Bearer ${authToken}` }),
     },
   };
 
