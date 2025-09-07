@@ -1,154 +1,126 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { CartProvider } from "./context/CartContext";
-import { ThemeProvider } from "./context/ThemeContext";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { LocationProvider, useLocation } from "./context/LocationContext";
-import { UiSettingsProvider } from "./context/UiSettingsContext";
-import { LocationPermissionModal } from "./components/LocationPermissionModal";
-import Layout from "./components/Layout";
-import { LoginPage } from "./pages/LoginPage";
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { DriverDashboard } from "./pages/DriverDashboard";
-import { useState } from "react";
-import Home from "./pages/Home";
-import Restaurant from "./pages/Restaurant";
-import Cart from "./pages/Cart";
-import Profile from "./pages/Profile";
-import Location from "./pages/Location";
-import OrderTracking from "./pages/OrderTracking";
-import Settings from "./pages/Settings";
-import Privacy from "./pages/Privacy";
-// Admin pages removed - now handled separately
-import NotFound from "@/pages/not-found";
+import React from 'react';
+import { Router, Route, Switch } from 'wouter';
+import { CartProvider } from '@/context/CartContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { UiSettingsProvider } from '@/context/UiSettingsContext';
+import Layout from '@/components/Layout';
 
-function AuthenticatedApp() {
-  const { isAuthenticated, userType, loading } = useAuth();
-  const { location } = useLocation();
-  const [showLogin, setShowLogin] = useState(false);
-  const [showLocationModal, setShowLocationModal] = useState(true);
+// صفحات العميل
+import HomePage from '@/pages/HomePage';
+import RestaurantPage from '@/pages/RestaurantPage';
+import CartPage from '@/pages/CartPage';
+import OrderTrackingPage from '@/pages/OrderTrackingPage';
+import ProfilePage from '@/pages/ProfilePage';
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">جاري التحميل...</p>
-        </div>
-      </div>
-    );
-  }
+// صفحات الإدارة
+import AdminLoginPage from '@/pages/admin/AdminLoginPage';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminRestaurants from '@/pages/admin/AdminRestaurants';
+import AdminMenuItems from '@/pages/AdminMenuItems';
+import AdminOffers from '@/pages/AdminOffers';
 
-  // Handle admin login route
-  if (window.location.pathname === '/admin-login') {
-    return (
-      <LoginPage 
-        onSuccess={() => {
-          if (userType === 'admin') {
-            window.location.href = '/admin/dashboard';
-          } else if (userType === 'driver') {
-            window.location.href = '/driver/dashboard';
-          } else {
-            window.location.href = '/';
-          }
-        }} 
-      />
-    );
-  }
+// صفحات السائق
+import DriverLoginPage from '@/pages/driver/DriverLoginPage';
+import DriverDashboard from '@/pages/DriverDashboard';
 
-  // Handle admin routes (completely separate from customer app)
-  if (window.location.pathname.startsWith('/admin/')) {
-    if (!isAuthenticated || userType !== 'admin') {
-      window.location.href = '/admin-login';
-      return null;
-    }
-    return (
-      <AdminDashboard 
-        onLogout={() => {
-          window.location.href = '/admin-login';
-        }} 
-      />
-    );
-  }
-
-  // Handle driver routes (completely separate from customer app)
-  if (window.location.pathname.startsWith('/driver/')) {
-    if (!isAuthenticated || userType !== 'driver') {
-      window.location.href = '/admin-login';
-      return null;
-    }
-    return (
-      <DriverDashboard 
-        onLogout={() => {
-          window.location.href = '/admin-login';
-        }} 
-      />
-    );
-  }
-
-  // Remove admin/driver routes from customer app routing
-
-  // Default customer app
-  return (
-    <>
-      <Layout>
-        <Router />
-      </Layout>
-      
-      {showLocationModal && !location.hasPermission && (
-        <LocationPermissionModal
-          onPermissionGranted={(position) => {
-            console.log('تم منح الإذن للموقع:', position);
-            setShowLocationModal(false);
-          }}
-          onPermissionDenied={() => {
-            console.log('تم رفض الإذن للموقع');
-            setShowLocationModal(false);
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/restaurant/:id" component={Restaurant} />
-      <Route path="/cart" component={Cart} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/addresses" component={Location} />
-      <Route path="/orders/:orderId" component={OrderTracking} />
-      <Route path="/orders" component={() => <OrderTracking />} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/privacy" component={Privacy} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+// مكونات مشتركة
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <ThemeProvider>
-          <UiSettingsProvider>
-            <LocationProvider>
-              <AuthProvider>
-                <CartProvider>
-                  <Toaster />
-                  <AuthenticatedApp />
-                </CartProvider>
-              </AuthProvider>
-            </LocationProvider>
-          </UiSettingsProvider>
-        </ThemeProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <UiSettingsProvider>
+        <CartProvider>
+          <Router>
+            <Switch>
+              {/* مسارات العميل */}
+              <Route path="/">
+                <Layout>
+                  <HomePage />
+                </Layout>
+              </Route>
+              <Route path="/restaurant/:id">
+                <Layout>
+                  <RestaurantPage />
+                </Layout>
+              </Route>
+              <Route path="/cart">
+                <Layout>
+                  <CartPage />
+                </Layout>
+              </Route>
+              <Route path="/order/:id">
+                <Layout>
+                  <OrderTrackingPage />
+                </Layout>
+              </Route>
+              <Route path="/profile">
+                <Layout>
+                  <ProfilePage />
+                </Layout>
+              </Route>
+
+            {/* مسارات الإدارة */}
+            <Route path="/admin-login" component={AdminLoginPage} />
+            
+            <Route path="/admin">
+              <ProtectedRoute userType="admin">
+                <AdminLayout>
+                  <AdminDashboard />
+                </AdminLayout>
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/admin/restaurants">
+              <ProtectedRoute userType="admin">
+                <AdminLayout>
+                  <AdminRestaurants />
+                </AdminLayout>
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/admin/menu-items">
+              <ProtectedRoute userType="admin">
+                <AdminLayout>
+                  <AdminMenuItems />
+                </AdminLayout>
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/admin/offers">
+              <ProtectedRoute userType="admin">
+                <AdminLayout>
+                  <AdminOffers />
+                </AdminLayout>
+              </ProtectedRoute>
+            </Route>
+
+            {/* مسارات السائق */}
+            <Route path="/driver-login" component={DriverLoginPage} />
+            <Route path="/delivery">
+              <ProtectedRoute userType="driver">
+                <DriverDashboard />
+              </ProtectedRoute>
+            </Route>
+
+            {/* صفحة 404 */}
+            <Route>
+              <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+                  <p className="text-gray-600 mb-8">الصفحة غير موجودة</p>
+                  <a href="/" className="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors">
+                    العودة للرئيسية
+                  </a>
+                </div>
+              </div>
+            </Route>
+            </Switch>
+          </Router>
+        </CartProvider>
+      </UiSettingsProvider>
+    </AuthProvider>
   );
 }
 

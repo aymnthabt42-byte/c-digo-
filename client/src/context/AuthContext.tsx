@@ -1,139 +1,167 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
-interface AuthState {
-  isAuthenticated: boolean;
-  userType: 'admin' | 'driver' | null;
-  token: string | null;
-  adminId: string | null;
+interface User {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  userType: 'admin' | 'driver' | 'customer';
+  token: string;
 }
 
-interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  login: (identifier: string, password: string, userType: 'admin' | 'driver') => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
-  loading: boolean;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    userType: null,
-    token: null,
-    adminId: null,
-  });
-  const [loading, setLoading] = useState(true);
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // تحقق من الجلسة المحفوظة عند تحميل التطبيق
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-      verifyToken(token);
-    } else {
-      setLoading(false);
-    }
+    const checkStoredAuth = () => {
+      try {
+        const storedToken = localStorage.getItem('auth_token');
+        const storedUser = localStorage.getItem('auth_user');
+        
+        if (storedToken && storedUser) {
+          const userData = JSON.parse(storedUser);
+          setUser({
+            ...userData,
+            token: storedToken
+          });
+        }
+      } catch (error) {
+        console.error('خطأ في استرداد بيانات المصادقة:', error);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkStoredAuth();
   }, []);
 
-  const verifyToken = async (token: string) => {
+  const login = async (identifier: string, password: string, userType: 'admin' | 'driver') => {
     try {
-      const response = await fetch('/api/admin/verify', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      setIsLoading(true);
+      
+      const endpoint = userType === 'admin' ? '/api/admin/login' : '/api/driver/login';
+      const body = userType === 'admin' 
+        ? { email: identifier, password }
+        : { phone: identifier, password };
 
-      if (response.ok) {
-        const data = await response.json();
-        setAuthState({
-          isAuthenticated: true,
-          userType: data.userType,
-          token,
-          adminId: data.adminId,
-        });
-      } else {
-        localStorage.removeItem('admin_token');
-        setAuthState({
-          isAuthenticated: false,
-          userType: null,
-          token: null,
-          adminId: null,
-        });
-      }
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      localStorage.removeItem('admin_token');
-      setAuthState({
-        isAuthenticated: false,
-        userType: null,
-        token: null,
-        adminId: null,
-      });
-    }
-    setLoading(false);
-  };
-
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        localStorage.setItem('admin_token', data.token);
-        setAuthState({
-          isAuthenticated: true,
-          userType: data.userType,
-          token: data.token,
-          adminId: data.driverId || 'admin-main',
+        const userData = {
+          id: data[userType].id,
+          name: data[userType].name,
+          email: data[userType].email,
+          phone: data[userType].phone,
+          userType: userType,
+          token: data.token
+        };
+
+        setUser(userData);
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify({
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          userType: userData.userType
+        }));
+
+        toast({
+          title: "تم تسجيل الدخول بنجاح",
+          description: `مرحباً ${userData.name}`,
         });
-        return { success: true, message: data.message };
+
+        return { success: true };
       } else {
-        return { success: false, message: data.message || 'خطأ في تسجيل الدخول' };
+        return { 
+          success: false, 
+          message: data.error || 'فشل في تسجيل الدخول' 
+        };
       }
     } catch (error) {
-      return { success: false, message: 'خطأ في الاتصال بالخادم' };
+      console.error('خطأ في تسجيل الدخول:', error);
+      return { 
+        success: false, 
+        message: 'حدث خطأ في الاتصال بالخادم' 
+      };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = async () => {
     try {
-      if (authState.token) {
-        await fetch('/api/admin/logout', {
+      if (user?.token) {
+        const endpoint = user.userType === 'admin' ? '/api/admin/logout' : '/api/driver/logout';
+        
+        await fetch(endpoint, {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${user.token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token: authState.token }),
         });
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('خطأ في تسجيل الخروج:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      
+      toast({
+        title: "تم تسجيل الخروج",
+        description: "تم تسجيل خروجك بنجاح",
+      });
     }
+  };
 
-    localStorage.removeItem('admin_token');
-    setAuthState({
-      isAuthenticated: false,
-      userType: null,
-      token: null,
-      adminId: null,
-    });
+  const value = {
+    user,
+    isLoading,
+    login,
+    logout,
+    isAuthenticated: !!user
   };
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, logout, loading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

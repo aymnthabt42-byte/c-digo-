@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { DriverControlPanel } from '../components/DriverControlPanel';
-import { NotificationSystem } from '../components/NotificationSystem';
-import { useUiSettings } from '../context/UiSettingsContext';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/context/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { NotificationSystem } from '@/components/NotificationSystem';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   Truck, 
   MapPin, 
@@ -18,21 +17,26 @@ import {
   CheckCircle,
   XCircle,
   Package,
-  Settings
+  TrendingUp,
+  Star
 } from 'lucide-react';
 
-interface DriverDashboardProps {
-  onLogout: () => void;
-}
-
-export const DriverDashboard: React.FC<DriverDashboardProps> = ({ onLogout }) => {
-  const { logout } = useAuth();
+export default function DriverDashboard() {
+  const { user, logout } = useAuth();
   const [isAvailable, setIsAvailable] = useState(true);
   const [currentOrder, setCurrentOrder] = useState<any>(null);
 
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['/api/driver/dashboard'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/driver/dashboard', null, user?.token);
+      return response.json();
+    },
+    refetchInterval: 10000, // تحديث كل 10 ثواني
+  });
+
   const handleLogout = () => {
     logout();
-    onLogout();
   };
 
   const toggleAvailability = () => {
@@ -40,78 +44,67 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({ onLogout }) =>
   };
 
   const acceptOrder = (orderId: string) => {
-    setCurrentOrder({
-      id: orderId,
-      customer: 'محمد أحمد',
-      phone: '0591234567',
-      address: 'شارع الزبيري، صنعاء',
-      restaurant: 'مطعم الوزيكو للعربكة',
-      items: 'عربكة بالقشطة والعسل × 2',
-      total: '₪110',
-      status: 'accepted'
-    });
+    // TODO: إرسال طلب قبول الطلب إلى الخادم
+    console.log('قبول الطلب:', orderId);
   };
 
   const completeOrder = () => {
+    // TODO: إرسال طلب إكمال الطلب إلى الخادم
     setCurrentOrder(null);
   };
 
-  const pendingOrders = [
-    {
-      id: '1001',
-      customer: 'محمد أحمد',
-      restaurant: 'مطعم الوزيكو للعربكة',
-      address: 'شارع الزبيري، صنعاء',
-      distance: '2.5 كم',
-      fee: '₪15',
-      time: 'منذ 5 دقائق'
-    },
-    {
-      id: '1002',
-      customer: 'سارة علي',
-      restaurant: 'حلويات الشام',
-      address: 'شارع الستين، صنعاء',
-      distance: '1.8 كم',
-      fee: '₪12',
-      time: 'منذ 8 دقائق'
-    }
+  const stats = dashboardData?.stats || {};
+  const availableOrders = dashboardData?.availableOrders || [];
+  const currentOrders = dashboardData?.currentOrders || [];
+
+  const todayStats = [
+    { title: 'توصيلات اليوم', value: stats.todayOrders || 0, icon: Package, color: 'text-blue-600' },
+    { title: 'أرباح اليوم', value: `${stats.todayEarnings || 0} ريال`, icon: DollarSign, color: 'text-green-600' },
+    { title: 'إجمالي الطلبات', value: stats.totalOrders || 0, icon: TrendingUp, color: 'text-orange-600' },
+    { title: 'التقييم', value: stats.averageRating || '0.0', icon: Star, color: 'text-yellow-600' },
   ];
 
-  const todayStats = {
-    deliveries: 12,
-    earnings: '₪180',
-    hours: '8.5',
-    distance: '45 كم'
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل البيانات...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <Truck className="h-8 w-8 text-green-600" />
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                <Truck className="h-6 w-6 text-white" />
+              </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">تطبيق السائق</h1>
-                <p className="text-sm text-gray-500">أحمد محمد</p>
+                <p className="text-sm text-gray-500">مرحباً {user?.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Button 
-                variant={isAvailable ? "default" : "outline"}
+                variant={isAvailable ? "default" : "secondary"}
                 onClick={toggleAvailability}
-                className={isAvailable ? "bg-green-600 hover:bg-green-700" : ""}
+                className={isAvailable ? "bg-green-600 hover:bg-green-700" : "bg-gray-500 hover:bg-gray-600"}
               >
                 {isAvailable ? 'متاح' : 'غير متاح'}
               </Button>
               <Button 
                 variant="outline" 
                 onClick={handleLogout}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
               >
                 <LogOut className="h-4 w-4" />
-                خروج
+                تسجيل الخروج
               </Button>
             </div>
           </div>
@@ -119,39 +112,61 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({ onLogout }) =>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Notification System */}
         <div className="mb-6">
           <NotificationSystem userType="driver" />
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {todayStats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
+                      <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    </div>
+                    <Icon className={`h-8 w-8 ${stat.color}`} />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
         {/* Current Order */}
-        {currentOrder && (
+        {currentOrders.length > 0 && (
           <Card className="mb-6 border-green-200 bg-green-50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-800">
                 <Package className="h-5 w-5" />
-                الطلب الحالي - #{currentOrder.id}
+                الطلب الحالي - #{currentOrders[0].orderNumber}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="font-medium">{currentOrder.customer}</p>
+                    <p className="font-medium">{currentOrders[0].customerName}</p>
                     <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                       <Phone className="h-4 w-4" />
-                      {currentOrder.phone}
+                      {currentOrders[0].customerPhone}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                       <MapPin className="h-4 w-4" />
-                      {currentOrder.address}
+                      {JSON.parse(currentOrders[0].deliveryAddress).address}
                     </div>
                   </div>
                   <div>
-                    <p className="font-medium">{currentOrder.restaurant}</p>
-                    <p className="text-sm text-gray-600 mt-1">{currentOrder.items}</p>
-                    <p className="text-lg font-bold text-green-600 mt-2">{currentOrder.total}</p>
+                    <p className="font-medium">{currentOrders[0].restaurantId?.name || 'مطعم'}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {JSON.parse(currentOrders[0].items).length} عنصر
+                    </p>
+                    <p className="text-lg font-bold text-green-600 mt-2">{currentOrders[0].total} ريال</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -169,48 +184,8 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({ onLogout }) =>
           </Card>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <Package className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">{todayStats.deliveries}</p>
-                <p className="text-sm text-gray-600">توصيلات اليوم</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <DollarSign className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">{todayStats.earnings}</p>
-                <p className="text-sm text-gray-600">أرباح اليوم</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <Clock className="h-6 w-6 text-orange-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">{todayStats.hours}</p>
-                <p className="text-sm text-gray-600">ساعات العمل</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <MapPin className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-gray-900">{todayStats.distance}</p>
-                <p className="text-sm text-gray-600">المسافة المقطوعة</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Available Orders */}
-        {isAvailable && !currentOrder && (
+        {isAvailable && currentOrders.length === 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -219,42 +194,46 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({ onLogout }) =>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {pendingOrders.length > 0 ? (
+              {availableOrders.length > 0 ? (
                 <div className="space-y-4">
-                  {pendingOrders.map((order) => (
-                    <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                  {availableOrders.map((order: any) => (
+                    <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <p className="font-medium">طلب #{order.id}</p>
-                          <p className="text-sm text-gray-600">{order.customer}</p>
+                          <p className="font-medium">طلب #{order.orderNumber}</p>
+                          <p className="text-sm text-gray-600">{order.customerName}</p>
                         </div>
-                        <Badge variant="secondary">{order.time}</Badge>
+                        <Badge variant="secondary">
+                          {new Date(order.createdAt).toLocaleTimeString('ar-YE')}
+                        </Badge>
                       </div>
                       
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center gap-2 text-sm">
                           <Package className="h-4 w-4 text-gray-400" />
-                          {order.restaurant}
+                          {order.restaurantId?.name || 'مطعم'}
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="h-4 w-4 text-gray-400" />
-                          {order.address}
+                          {JSON.parse(order.deliveryAddress).address}
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span>المسافة: {order.distance}</span>
-                          <span className="font-medium text-green-600">{order.fee}</span>
+                          <span>المجموع: {order.total} ريال</span>
+                          <span className="font-medium text-green-600">
+                            رسوم التوصيل: {order.deliveryFee} ريال
+                          </span>
                         </div>
                       </div>
                       
                       <div className="flex gap-3">
                         <Button 
-                          className="flex-1"
+                          className="flex-1 bg-green-600 hover:bg-green-700"
                           onClick={() => acceptOrder(order.id)}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
                           قبول الطلب
                         </Button>
-                        <Button variant="outline" className="flex-1">
+                        <Button variant="outline" className="flex-1 text-red-600 hover:bg-red-50">
                           <XCircle className="h-4 w-4 mr-2" />
                           رفض
                         </Button>
@@ -291,4 +270,4 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({ onLogout }) =>
       </main>
     </div>
   );
-};
+}

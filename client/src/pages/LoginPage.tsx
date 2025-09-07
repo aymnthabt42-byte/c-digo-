@@ -26,11 +26,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     setError('');
 
     try {
-      const result = await login(email, password);
+      const result = await login(email, password, activeTab as 'admin' | 'driver');
       if (result.success) {
         onSuccess();
       } else {
-        setError(result.message);
+        setError(result.message ?? 'حدث خطأ غير متوقع');
       }
     } catch (error) {
       setError('خطأ في تسجيل الدخول');

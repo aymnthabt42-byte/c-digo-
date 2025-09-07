@@ -177,7 +177,7 @@ export default function Delivery() {
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-foreground">{order.deliveryAddress}</span>
+                      <span className="text-sm text-foreground">{String(order.deliveryAddress ?? '')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
